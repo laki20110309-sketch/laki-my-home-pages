@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>管理ページ / laki!</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Teko:wght@500;600;700&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #FFFFFF;
+    --panel: #EFF8FB;
+    --panel-2: #E2F1F7;
+    --line: #CFE6EF;
+    --text: #142530;
+    --text-dim: #5D7885;
+    --live: #E5484D;
+    --accent: #12A6D9;
+    --accent-soft: rgba(18,166,217,0.10);
+    --gold: #D98C00;
+  }
+  *{ box-sizing: border-box; }
+  body{
+    margin:0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Zen Kaku Gothic New', sans-serif;
+    line-height: 1.7;
+  }
+  .mono{ font-family:'JetBrains Mono', monospace; }
+
+  header{
+    padding: 22px clamp(20px,6vw,56px);
+    border-bottom: 1px solid var(--line);
+    display:flex; justify-content:space-between; align-items:center;
+  }
+  header .brand{
+    font-family:'Teko', sans-serif;
+    font-weight: 600;
+    font-size: 22px;
+  }
+  header .brand span{ color: var(--accent); }
+  header .status{ font-family:'JetBrains Mono', monospace; font-size: 12px; color: var(--text-dim); }
+
+  .wrap{
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 40px clamp(20px,6vw,56px) 100px;
+  }
+
+  /* ---- login ---- */
+  #loginView{
+    max-width: 360px;
+    margin: 80px auto;
+    padding: 32px clamp(20px,6vw,32px);
+  }
+  #loginView h1{ font-size: 22px; margin: 0 0 6px; }
+  #loginView p.sub{ font-size: 13px; color: var(--text-dim); margin: 0 0 24px; }
+
+  label{
+    display:block;
+    font-family:'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--text-dim);
+    margin: 16px 0 6px;
+  }
+  input, textarea{
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: var(--panel);
+    color: var(--text);
+    font-family: 'Zen Kaku Gothic New', sans-serif;
+    font-size: 14px;
+  }
+  textarea{ resize: vertical; min-height: 70px; }
+  input:focus, textarea:focus{ outline: 2px solid var(--accent); outline-offset: 1px; }
+
+  button{
+    font-family:'JetBrains Mono', monospace;
+    font-size: 13px;
+    letter-spacing: .04em;
+    color: #fff;
+    background: var(--accent);
+    border: none;
+    padding: 11px 18px;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-top: 20px;
+    transition: opacity .15s ease;
+  }
+  button:hover{ opacity: .85; }
+  button.secondary{
+    background: transparent;
+    color: var(--text-dim);
+    border: 1px solid var(--line);
+  }
+  button.danger{
+    background: var(--live);
+  }
+
+  #errorMsg{
+    color: var(--live);
+    font-size: 13px;
+    font-family:'JetBrains Mono', monospace;
+    margin-top: 12px;
+    display:none;
+  }
+
+  /* ---- admin panel ---- */
+  #adminView{ display:none; }
+
+  section.panel{
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 24px;
+    margin-bottom: 32px;
+  }
+  section.panel h2{
+    font-size: 18px;
+    margin: 0 0 4px;
+  }
+  section.panel .desc{ font-size: 12px; color: var(--text-dim); margin: 0 0 8px; }
+
+  .item-list{ margin-top: 24px; display: flex; flex-direction: column; gap: 10px; }
+  .item-row{
+    display:flex; justify-content:space-between; align-items:center; gap: 12px;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 12px 14px;
+  }
+  .item-row .item-title{ font-size: 14px; font-weight: 500; }
+  .item-row .item-sub{ font-size: 12px; color: var(--text-dim); font-family:'JetBrains Mono', monospace; }
+  .item-row button{ margin-top: 0; padding: 7px 12px; font-size: 12px; }
+
+  .save-msg{
+    font-family:'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--accent);
+    margin-top: 10px;
+    display: none;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <span class="brand mono">laki! ADMIN<span>.</span></span>
+  <span class="status mono" id="authStatus">未ログイン</span>
+</header>
+
+<!-- ログイン画面 -->
+<div id="loginView">
+  <h1>管理ページ</h1>
+  <p class="sub">Firebaseに登録したメールアドレスでログインしてください。</p>
+  <label for="loginEmail">メールアドレス</label>
+  <input type="email" id="loginEmail" autocomplete="username">
+  <label for="loginPassword">パスワード</label>
+  <input type="password" id="loginPassword" autocomplete="current-password">
+  <button id="loginBtn">ログイン</button>
+  <p id="errorMsg" class="mono"></p>
+</div>
+
+<!-- 管理画面 -->
+<div id="adminView">
+  <div class="wrap">
+
+    <button class="secondary" id="logoutBtn" style="margin-bottom:24px;">ログアウト</button>
+
+    <section class="panel">
+      <h2>作ったシステムを追加</h2>
+      <p class="desc mono">公開サイトの「Systems」セクションに表示されます。</p>
+
+      <label for="sysTitle">タイトル</label>
+      <input type="text" id="sysTitle" placeholder="例: 大会エントリー自動集計システム">
+
+      <label for="sysDesc">説明</label>
+      <textarea id="sysDesc" placeholder="どんなシステムか、簡単に説明してください"></textarea>
+
+      <label for="sysTech">使用技術(カンマ区切り)</label>
+      <input type="text" id="sysTech" placeholder="例: Python, Discord.js, Firebase">
+
+      <label for="sysUrl">リンク(任意)</label>
+      <input type="text" id="sysUrl" placeholder="https://...">
+
+      <button id="sysAddBtn">追加する</button>
+      <p class="save-msg mono" id="sysSaveMsg">追加しました</p>
+
+      <div class="item-list" id="sysList"></div>
+    </section>
+
+    <section class="panel">
+      <h2>運営した大会を追加</h2>
+      <p class="desc mono">公開サイトの「Tournaments」セクションに表示されます。</p>
+
+      <label for="trTitle">大会名</label>
+      <input type="text" id="trTitle" placeholder="例: 第3回 〇〇杯">
+
+      <label for="trDesc">説明</label>
+      <textarea id="trDesc" placeholder="規模、内容、担当したことなど"></textarea>
+
+      <label for="trDate">開催時期(任意・自由記述)</label>
+      <input type="text" id="trDate" placeholder="例: 2026年3月">
+
+      <label for="trUrl">リンク(任意)</label>
+      <input type="text" id="trUrl" placeholder="https://...">
+
+      <button id="trAddBtn">追加する</button>
+      <p class="save-msg mono" id="trSaveMsg">追加しました</p>
+
+      <div class="item-list" id="trList"></div>
+    </section>
+
+  </div>
+</div>
+
+<script type="module">
+  // ==== Firebase config: 公開サイト(profile.html)と同じ値にしてください ====
+  const firebaseConfig = {
+    apiKey: "AIzaSyAOWq8rH3BuVMT8Nbs3FMDwk1SxjCA_Jmc",
+    authDomain: "laki-home-pages.firebaseapp.com",
+    projectId: "laki-home-pages",
+    storageBucket: "laki-home-pages.firebasestorage.app",
+    messagingSenderId: "533794254368",
+    appId: "1:533794254368:web:df9ad8f9dcfac567a25645"
+  };
+
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import {
+    getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  import {
+    getFirestore, collection, addDoc, deleteDoc, doc,
+    getDocs, query, orderBy, serverTimestamp
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+  const loginView = document.getElementById('loginView');
+  const adminView = document.getElementById('adminView');
+  const authStatus = document.getElementById('authStatus');
+  const errorMsg = document.getElementById('errorMsg');
+
+  function showError(msg){
+    errorMsg.textContent = msg;
+    errorMsg.style.display = 'block';
+  }
+
+  document.getElementById('loginBtn').addEventListener('click', async () => {
+    errorMsg.style.display = 'none';
+    const email = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+    } catch (err) {
+      showError('ログインに失敗しました。mail＆password is check');
+    }
+  });
+
+  document.getElementById('logoutBtn').addEventListener('click', () => signOut(auth));
+
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      loginView.style.display = 'none';
+      adminView.style.display = 'block';
+      authStatus.textContent = user.email + ' でログイン中';
+      loadList('systems', 'sysList');
+      loadList('tournaments', 'trList');
+    } else {
+      loginView.style.display = 'block';
+      adminView.style.display = 'none';
+      authStatus.textContent = 'not logged in';
+    }
+  });
+
+  function escapeHtml(str){
+    const d = document.createElement('div');
+    d.textContent = str || '';
+    return d.innerHTML;
+  }
+
+  async function loadList(collectionName, listElId){
+    const listEl = document.getElementById(listElId);
+    listEl.innerHTML = '<p class="mono" style="font-size:12px;color:var(--text-dim);">読み込み中...</p>';
+    const q = query(collection(db, collectionName), orderBy('createdAt', 'desc'));
+    const snap = await getDocs(q);
+    if (snap.empty) {
+      listEl.innerHTML = '<p class="mono" style="font-size:12px;color:var(--text-dim);">まだ登録がありません。</p>';
+      return;
+    }
+    listEl.innerHTML = '';
+    snap.forEach(docSnap => {
+      const data = docSnap.data();
+      const row = document.createElement('div');
+      row.className = 'item-row';
+      row.innerHTML = `
+        <div>
+          <div class="item-title">${escapeHtml(data.title)}</div>
+          <div class="item-sub">${escapeHtml(data.tech || data.date || '')}</div>
+        </div>
+        <button class="danger" data-id="${docSnap.id}">削除</button>
+      `;
+      row.querySelector('button').addEventListener('click', async (e) => {
+        if (!confirm('削除しますか?')) return;
+        await deleteDoc(doc(db, collectionName, e.target.dataset.id));
+        loadList(collectionName, listElId);
+      });
+      listEl.appendChild(row);
+    });
+  }
+
+  document.getElementById('sysAddBtn').addEventListener('click', async () => {
+    const title = document.getElementById('sysTitle').value.trim();
+    const description = document.getElementById('sysDesc').value.trim();
+    const techRaw = document.getElementById('sysTech').value.trim();
+    const url = document.getElementById('sysUrl').value.trim();
+    if (!title || !description) { alert('タイトルと説明は必須です'); return; }
+    const tags = techRaw ? techRaw.split(',').map(t => t.trim()).filter(Boolean) : [];
+    await addDoc(collection(db, 'systems'), {
+      title, description, tech: techRaw, tags, url: url || null,
+      createdAt: serverTimestamp()
+    });
+    document.getElementById('sysTitle').value = '';
+    document.getElementById('sysDesc').value = '';
+    document.getElementById('sysTech').value = '';
+    document.getElementById('sysUrl').value = '';
+    flashMsg('sysSaveMsg');
+    loadList('systems', 'sysList');
+  });
+
+  document.getElementById('trAddBtn').addEventListener('click', async () => {
+    const title = document.getElementById('trTitle').value.trim();
+    const description = document.getElementById('trDesc').value.trim();
+    const date = document.getElementById('trDate').value.trim();
+    const url = document.getElementById('trUrl').value.trim();
+    if (!title || !description) { alert('大会名と説明は必須です'); return; }
+    await addDoc(collection(db, 'tournaments'), {
+      title, description, date: date || null, url: url || null,
+      createdAt: serverTimestamp()
+    });
+    document.getElementById('trTitle').value = '';
+    document.getElementById('trDesc').value = '';
+    document.getElementById('trDate').value = '';
+    document.getElementById('trUrl').value = '';
+    flashMsg('trSaveMsg');
+    loadList('tournaments', 'trList');
+  });
+
+  function flashMsg(id){
+    const el = document.getElementById(id);
+    el.style.display = 'block';
+    setTimeout(() => { el.style.display = 'none'; }, 2000);
+  }
+</script>
+
+</body>
+</html>
